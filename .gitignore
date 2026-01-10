@@ -1,3 +1,4 @@
 node_modules/*
+auth_dirs/*
 config/firebase-service-account.json
 .env

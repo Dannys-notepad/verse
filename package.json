@@ -5,13 +5,16 @@
   "main": "./api/server.js",
   "type": "module",
   "scripts": {
-    "dev": "node --watch ./api/server.js"
+    "api": "node --watch ./api/server.js",
+    "whatsapp": "node --watch ./platforms/whatsapp/client.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.27.0",
   "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc.9",
+    "axios": "^1.13.2",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -19,6 +22,11 @@
     "express-rate-limit": "^8.2.1",
     "firebase-admin": "^13.6.0",
     "helmet": "^8.1.0",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "node-cache": "^5.1.2",
+    "npmlog": "^7.0.1",
+    "pino": "^10.1.1",
+    "pm2": "^6.0.14",
+    "qrcode-terminal": "^0.12.0"
   }
 }
