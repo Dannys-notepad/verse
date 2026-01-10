@@ -39,7 +39,6 @@ async function initWhatsAppClient() {
 
     const sock = makeWASocket({
       version,
-      //logger,
       logger: Pino({ level: 'silent' }),
       auth: state,
       printQRInTerminal: false,
