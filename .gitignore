@@ -1,4 +1,4 @@
 node_modules/*
-auth_dirs/*
+auth_dirs/.whatsapp_auth/*
 config/firebase-service-account.json
 .env
