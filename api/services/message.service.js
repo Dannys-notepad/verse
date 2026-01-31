@@ -1,4 +1,4 @@
-import { generateAIReply } from '../ai/ai.service.js';
+import { generateAIReply } from '../../shared/ai/ai.service.js';
 
 export async function handleMessage({ text, chatId, platform }) {
   const replyText = await generateAIReply({

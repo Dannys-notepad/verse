@@ -20,6 +20,9 @@ async function privateMessage(msg, sock) {
     // --------------------------------------------------
     if (!msg || !msg.message) return;
 
+    // Ignore messages sent by this client (prevents reply loops)
+    if (msg.key?.fromMe) return;
+
     // Ignore very old messages (WhatsApp reconnect flood protection)
     const messageTimestamp = Number(msg.messageTimestamp) * 1000;
     const now = Date.now();
@@ -97,20 +100,145 @@ async function privateMessage(msg, sock) {
 
         // Show typing indicator for better UX
         if (sock?.sendPresenceUpdate) {
-          await sock.sendPresenceUpdate('composing', chatId);
+          try {
+            await sock.sendPresenceUpdate('composing', chatId);
+          } catch (e) {
+            // Ignore presence update errors
+            log.error('WhatsApp Client', 'Failed to send presence update', e.message);
+          }
         }
 
-        return replyMessage(sock, msg, content, options);
+        const replyResult = await replyMessage(sock, msg, content, options);
+        
+        // Mark our own reply as read immediately after sending
+        if (replyResult && sock?.sendReadReceipt) {
+          try {
+            // For our own messages, we mark them as read immediately
+            // This gives the impression of a seamless conversation
+            setTimeout(async () => {
+              try {
+                // Use the reply's message key to mark it as read
+                // If replyResult contains the sent message info
+                if (replyResult.key?.id) {
+                  await sock.sendReadReceipt(chatId, null, [replyResult.key.id]);
+                  log.error('WhatsApp Client', `Marked our reply ${replyResult.key.id} as read`);
+                }
+              } catch (e) {
+                // Silent fail for read receipt on our own messages
+              }
+            }, 1000); // Small delay before marking our own message as read
+          } catch (e) {
+            // Ignore errors for marking our own messages as read
+          }
+        }
+        
+        return replyResult;
+      },
+      
+      /**
+       * Mark message as read (blue tick)
+       */
+      markAsRead: async () => {
+        if (!sock?.sendReadReceipt) return false;
+        
+        try {
+          // Get the message ID
+          const messageId = msg.key?.id;
+          if (!messageId) return false;
+          
+          // For direct chats, just use chatId and messageId
+          // For group chats, include the participant
+          const participant = msg.key?.participant ?? null;
+          
+          await sock.sendReadReceipt(chatId, participant, [messageId]);
+          log.info('WhatsApp Client', `✅ Marked message ${messageId} as read`);
+          return true;
+        } catch (error) {
+          log.error('WhatsApp Client', 'Failed to mark message as read', error.message);
+          return false;
+        }
+      },
+      
+      /**
+       * Mark message as delivered (double grey tick)
+       */
+      markAsDelivered: async () => {
+        if (!sock?.sendReceipt) return false;
+        
+        try {
+          await sock.sendReceipt(chatId, msg.key?.participant, [msg.key?.id]);
+          log.error('WhatsApp Client', `Marked message ${msg.key?.id} as delivered`);
+          return true;
+        } catch (error) {
+          log.error('WhatsApp Client', 'Failed to mark message as delivered', error.message);
+          return false;
+        }
       },
     };
 
+    // --------------------------------------------------
+    // 5. MARK INCOMING MESSAGE AS READ
+    // --------------------------------------------------
+    // Mark as delivered first (usually happens automatically but we ensure it)
+    await messageObj.markAsDelivered();
+    
+    // Mark as read after a short delay (more natural UX)
+    setTimeout(async () => {
+      await messageObj.markAsRead();
+    }, 1000); // 1 second delay before showing blue tick
+
+    // --------------------------------------------------
+    // 6. PROCESS MESSAGE & GENERATE REPLY
+    // --------------------------------------------------
+    await processMessageAndReply(messageObj);
 
   } catch (error) {
     log.error(
       'WhatsApp Client',
       'Error while handling private message',
-      error
+      error.message
     );
+  }
+}
+
+/**
+ * Process message through AI and send reply
+ */
+async function processMessageAndReply(messageObj) {
+  let replyAttempted = false;
+  
+  try {
+    const { generateAIReply } = await import('../../../shared/ai/ai.service.js');
+
+    // Generate AI reply
+    const aiResponse = await generateAIReply({
+      userMessage: messageObj.text,
+    });
+
+    // Send reply through WhatsApp
+    replyAttempted = true;
+    const replyResult = await messageObj.reply(aiResponse);
+    return replyResult;
+  } catch (error) {
+    log.error(
+      'WhatsApp Client',
+      'Failed to process message and generate reply',
+      error.message
+    );
+    
+    // Only send error reply if we haven't already attempted to reply
+    if (!replyAttempted) {
+      try {
+        await messageObj.reply('Sorry, I encountered an error processing your message. Please try again.');
+      } catch (replyError) {
+        // If sending error message also fails, just log it and don't retry
+        log.error(
+          'WhatsApp Client',
+          'Failed to send error message to user',
+          replyError.message
+        );
+      }
+    }
   }
 }
 
@@ -174,24 +302,44 @@ function getMentionedIds(msg) {
 async function replyMessage(sock, msg, content, options = {}) {
   if (!content) {
     log.warn('WhatsApp Client', 'Attempted to send empty reply');
-    return;
+    return null;
   }
 
   const chatId = getChatId(msg);
 
   try {
-    await sock.sendMessage(
+    // Add typing indicator before sending
+    if (sock?.sendPresenceUpdate) {
+      try {
+        await sock.sendPresenceUpdate('composing', chatId);
+      } catch (e) {
+        // Ignore presence errors
+      }
+    }
+    
+    const sentMessage = await sock.sendMessage(
       chatId,
       { text: String(content) },
       { quoted: options.quoted ?? msg }
     );
 
     log.info('WhatsApp Client', `✅ Replied to ${chatId}`);
+    return sentMessage;
   } catch (error) {
     log.error(
       'WhatsApp Client',
       `❌ Failed to reply to ${chatId}`,
       error.message
     );
+    throw error; // Re-throw so caller knows reply failed
+  } finally {
+    // Clear typing indicator after sending
+    if (sock?.sendPresenceUpdate) {
+      try {
+        await sock.sendPresenceUpdate('paused', chatId);
+      } catch (e) {
+        // Ignore presence errors
+      }
+    }
   }
 }

@@ -1,17 +1,39 @@
 import { ensureUserExists } from '../services/user.service.js';
+import { handleMessage as processMessage } from '../services/message.service.js';
+import log from '../../shared/utils/log.js';
 
 export default async function handleMessage(req, res, next){
   try {
-    const message = req.body;
+    const { user, chatId, platform, text } = req.body;
 
-    await ensureUserExists(message.user);
+    // Validate required fields
+    if (!user || !chatId || !platform || !text) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: user, chatId, platform, text',
+      });
+    }
 
+    // Ensure user exists in database
+    await ensureUserExists(user);
 
-    res.status(202).json({
+    // Process message and generate AI reply
+    const reply = await processMessage({
+      text,
+      chatId,
+      platform,
+      userId: user.id,
+    });
+
+    log.info('Message Controller', `Reply generated for ${chatId}`);
+
+    res.status(200).json({
       success: true,
-      message: 'Message received',
+      message: 'Message processed',
+      reply,
     });
   } catch (err) {
+    log.error('Message Controller', 'Error processing message', err.message);
     next(err);
   }
 }
