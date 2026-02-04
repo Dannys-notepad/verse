@@ -11,7 +11,7 @@ import {
     fetchLatestBaileysVersion,
     DisconnectReason,
 } from '@whiskeysockets/baileys';
-//import handleMessage from './events/message.js'
+import handleMessage from './events/message.js'
 
 // Recreate __filename and __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -122,8 +122,19 @@ async function initWhatsAppClient() {
 
             if (connection === 'open') {
                 log.info('WhatsApp Client', 'Connected to WhatsApp ✅');
-                log.info('WhatsApp Client', 'Bot is ready to receive messages 📨')
+                log.info('WhatsApp Client', 'Bot is ready to receive messages 📨');
                 reconnectAttempt = 0;
+
+                // Log the connected WhatsApp ID/number when available
+                try {
+                    const meId = sock?.user?.id || state?.creds?.me?.id;
+                    if (meId && typeof meId === 'string') {
+                        const phoneNumber = meId.split('@')[0];
+                        log.info('WhatsApp Client', `Logged in as ${meId} (${phoneNumber})`);
+                    }
+                } catch (err) {
+                    log.warn('WhatsApp Client', `Failed to determine logged-in number: ${err?.message || err}`);
+                }
             }
 
             if (isNewLogin) {
