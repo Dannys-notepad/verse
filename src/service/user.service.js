@@ -1,5 +1,5 @@
-import { findUserById, upsertUser } from '../../shared/db/repos/user.repo.js';
-import createUserModel from '../../shared/models/user.model.js';
+import { findUserById, upsertUser } from '../db/repos/user.repo.js';
+import createUserModel from '../models/user.model.js';
 
 export async function ensureUserExists(userPayload) {
   const existingUser = await findUserById(userPayload.id);
