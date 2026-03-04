@@ -38,7 +38,7 @@ function handleBuiltIns(text) {
 
     // Pattern 2: Identity questions - explain who Verse is
     if (/^(who are you|what are you|about|info|who created you|who built you|who owns you)$/i.test(lower)) {
-        return "I'm Verse, an intelligent assistant built to help you with questions, tasks and more.";
+        return "I'm Verse, an intelligent AI/bot hybrid assitant built to help you with questions, tasks and more.";
     }
 
     // Pattern 3: Time queries - return current time without API call

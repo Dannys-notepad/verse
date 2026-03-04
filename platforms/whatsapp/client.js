@@ -23,6 +23,14 @@ const AUTH_FOLDER = path.join(__dirname, '../../.whatsapp_auth');
  */
 
 async function initWhatsAppClient() {
+    let sock;
+    let readyResolver;
+    let readyRejecter;
+    const readyPromise = new Promise((resolve, reject) => {
+        readyResolver = resolve;
+        readyRejecter = reject;
+    });
+
     try {
         if (!fs.existsSync(AUTH_FOLDER)) {
             fs.mkdirSync(AUTH_FOLDER, { recursive: true });
@@ -37,7 +45,7 @@ async function initWhatsAppClient() {
 
         log.info('WhatsApp Client', `Using WhatsApp Web v${version.join('.')} (isLatest: ${isLatest})`);
 
-        const sock = makeWASocket({
+        sock = makeWASocket({
             version,
             logger: Pino({ level: 'silent' }),
             auth: state,
@@ -135,6 +143,12 @@ async function initWhatsAppClient() {
                 } catch (err) {
                     log.warn('WhatsApp Client', `Failed to determine logged-in number: ${err?.message || err}`);
                 }
+                // Resolve ready promise once connected
+                try {
+                    if (readyResolver) readyResolver({ sock, state });
+                } catch (e) {
+                    // ignore
+                }
             }
 
             if (isNewLogin) {
@@ -155,10 +169,37 @@ async function initWhatsAppClient() {
         });
     } catch (error) {
         log.error('WhatsApp Client', `Error: ${error.message}`);
+        if (readyRejecter) readyRejecter(error);
     }
+
+    // Return control handles for lifecycle management
+    return {
+        waitForReady: () => readyPromise,
+        stop: async () => {
+            try {
+                log.info('WhatsApp Client', 'Shutting down WhatsApp client...');
+                if (sock) {
+                    if (typeof sock.logout === 'function') {
+                        try { await sock.logout(); } catch (e) { /* ignore */ }
+                    }
+                    if (sock.ws && typeof sock.ws.close === 'function') {
+                        try { sock.ws.close(); } catch (e) { /* ignore */ }
+                    }
+                    if (typeof sock.close === 'function') {
+                        try { await sock.close(); } catch (e) { /* ignore */ }
+                    }
+                    // remove event listeners
+                    try { sock.ev.removeAllListeners && sock.ev.removeAllListeners(); } catch (e) { }
+                }
+                log.info('WhatsApp Client', 'WhatsApp client stopped');
+                return true;
+            } catch (err) {
+                log.error('WhatsApp Client', `Error during stop: ${err?.message || err}`);
+                return false;
+            }
+        }
+    };
 }
 
 
 export default initWhatsAppClient;
-
-
