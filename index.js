@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import log from './shared/utils/log.js';
+import log from './src/utils/log.js';
 
 const services = [
   /*{

@@ -14,6 +14,7 @@
  */
 import { generateResponse } from '../../../src/response/ai/responseGenerator.js';
 import log from '../../../src/utils/log.js';
+import { formatWhatsAppResponse } from '../../../src/utils/whatsappFormatter.js';
 
 /**
  * Configuration constants
@@ -134,8 +135,9 @@ export default async function handleMessage(msg, sock) {
             aiResponse = "Sorry, I encountered an error processing your message. Please try again.";
         }
 
-        // STAGE 9: Send response with typing indicator
-        const sendResult = await sendReplyWithTyping(sock, msg, chatId, aiResponse, receivedAt, senderId);
+        // STAGE 9: Format response for WhatsApp and send with typing indicator
+        const formattedResponse = formatWhatsAppResponse(aiResponse);
+        const sendResult = await sendReplyWithTyping(sock, msg, chatId, formattedResponse, receivedAt, senderId);
 
         if (sendResult) {
             log.info('WhatsApp Client', `✅ Response sent successfully`);

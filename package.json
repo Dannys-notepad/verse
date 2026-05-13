@@ -1,7 +1,7 @@
 {
   "name": "verse",
   "version": "1.0.0",
-  "description": "",
+  "description": "Verse is a cross-platform Ai/bot hybrid, powered by advanced LLMs, for accuracy and efficency",
   "main": "app.js",
   "type": "module",
   "scripts": {
@@ -19,6 +19,7 @@
     "express": "^5.2.1",
     "firebase-admin": "^13.6.0",
     "node-cache": "^5.1.2",
+    "node-telegram-bot-api": "^0.67.0",
     "npmlog": "^7.0.1",
     "pino": "^10.1.1",
     "qrcode-terminal": "^0.12.0"

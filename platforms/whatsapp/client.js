@@ -41,7 +41,7 @@ async function initWhatsAppClient() {
         const { version, isLatest } = await fetchLatestBaileysVersion();
 
         // Generate a unique browser ID for this session
-        const browserId = `$Verse-${Math.random().toString(36).substring(2, 8)}`
+        const browser = ['Verse', 'Chrome', '120.0']
 
         log.info('WhatsApp Client', `Using WhatsApp Web v${version.join('.')} (isLatest: ${isLatest})`);
 
@@ -51,9 +51,11 @@ async function initWhatsAppClient() {
             auth: state,
             printQRInTerminal: false,
             syncFullHistory: false,
-            markOnlineOnConnect: true,
+            markOnlineOnConnect: false,
             msgRetryCounterCache: new NodeCache(),
-            browser: [browserId, 'Chrome', '1.0.0']
+            browser,
+            shouldIgnoreJidEndpoint: false,
+            generateHighQualityLinkPreview: true,
         });
 
         sock.ev.on('creds.update', saveCreds);
@@ -67,8 +69,10 @@ async function initWhatsAppClient() {
             if (qr) {
                 log.info('QR Code', '📱 Scan this QR with WhatsApp (Linked Devices):');
                 qrcode.generate(qr, { small: true });
-
             }
+
+            // Log all connection state changes for debugging
+            log.info('WhatsApp Client', `Connection state: ${connection}`);
 
             const disconnectReasons = {
                 [DisconnectReason.badSession]: 'Bad session file',
@@ -83,9 +87,12 @@ async function initWhatsAppClient() {
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
                 const errorCode = lastDisconnect?.error?.output?.payload?.attrs?.code;
+                const fullError = lastDisconnect?.error?.message || lastDisconnect?.error?.toString();
                 const reason = disconnectReasons[statusCode] || 'Unknown reason';
 
                 log.warn('WhatsApp Client', `❌ Disconnected: ${reason} (${statusCode})`);
+                log.warn('WhatsApp Client', `Full error: ${fullError}`);
+                log.warn('WhatsApp Client', `Error code: ${errorCode}`);
 
                 if (statusCode === DisconnectReason.loggedOut) {
                     log.error(
@@ -113,10 +120,10 @@ async function initWhatsAppClient() {
 
                 if (reconnectAttempt < MAX_RECONNECT_ATTEMPTS) {
                     reconnectAttempt++;
-                    const delay = reconnectAttempt * 2000;
+                    const delay = reconnectAttempt * 3000;
                     log.info(
                         'WhatsApp Client',
-                        `Reconnecting... (Attempt ${reconnectAttempt} of ${MAX_RECONNECT_ATTEMPTS})`
+                        `Reconnecting... (Attempt ${reconnectAttempt} of ${MAX_RECONNECT_ATTEMPTS}, waiting ${delay}ms)`
                     );
                     setTimeout(initWhatsAppClient, delay);
                 } else {

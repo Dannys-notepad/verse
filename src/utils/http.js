@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-    timeout: Number(process.env.AXIOS_TIMEOUT ?? 15000),
+    timeout: Number(process.env.AXIOS_TIMEOUT ?? 30000),
     headers: {
         'User-Agent': process.env.AXIOS_USER_AGENT ?? 'Verse/1.0.0',
         'Content-Type': 'application/json',

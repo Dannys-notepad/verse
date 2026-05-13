@@ -1,6 +1,7 @@
 import express from 'express';
 
-import initWhatsAppClient from './platforms/whatsapp/client.js';
+//import initWhatsAppClient from './platforms/whatsapp/client.js';
+import initTelegramClient from './platforms/telegram/client.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,14 +23,24 @@ const platformHandles = [];
 
 async function startPlatformClients() {
     try {
-        const wa = await initWhatsAppClient();
+        // Initialize WhatsApp client
+        /*const wa = await initWhatsAppClient();
         platformHandles.push(wa);
 
-        // Wait for client ready but don't block startup indefinitely
         wa.waitForReady().then(() => {
             console.log('WhatsApp client ready');
         }).catch(err => {
             console.error('WhatsApp client failed to be ready', err?.message || err);
+        });*/
+
+        // Initialize Telegram client
+        const tg = await initTelegramClient();
+        platformHandles.push(tg);
+
+        tg.waitForReady().then(() => {
+            console.log('Telegram client ready');
+        }).catch(err => {
+            console.error('Telegram client failed to be ready', err?.message || err);
         });
     } catch (error) {
         console.error('Failed to start platform clients:', error?.message || error);
