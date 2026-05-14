@@ -51,6 +51,78 @@ export async function updateUserActivity(userId) {
   }
 }
 
+export async function resetToken(userId) {
+  if (!userId) {
+    throw new Error('userId is required');
+  }
+
+  try {
+    const ref = db.collection('users').doc(userId);
+    await ref.update({
+      token: 20,
+      lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return userId;
+  } catch (error) {
+    console.error(`Error resetting user token ${userId}:`, error.message);
+    throw error;
+  }
+}
+
+export async function updateUserActivity(userId) {
+  if (!userId) {
+    throw new Error('userId is required');
+  }
+
+  try {
+    const ref = db.collection('users').doc(userId);
+    await ref.update({
+      lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return userId;
+  } catch (error) {
+    console.error(`Error updating user activity ${userId}:`, error.message);
+    throw error;
+  }
+}
+
+export async function deductToken(userId) {
+  if (!userId) {
+    throw new Error('userId is required');
+  }
+
+  try {
+    const ref = db.collection('users').doc(userId);
+    const tokenDeducted = Number(token) - 1
+    await ref.update({
+      token: tokenDeducted,
+      lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return userId;
+  } catch (error) {
+    console.error(`Error deducting user token ${userId}:`, error.message);
+    throw error;
+  }
+}
+
+export async function bannUser(userId) {
+  if (!userId) {
+    throw new Error('userId is required');
+  }
+
+  try {
+    const ref = db.collection('users').doc(userId);
+    await ref.update({
+      accountStatus: 'banned',
+      lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return userId;
+  } catch (error) {
+    console.error(`Error banning ${userId}:`, error.message);
+    throw error;
+  }
+}
+
 // Kept for backward compatibility - upserts with proper logic
 export async function upsertUser(user) {
   if (!user || !user.id) {
