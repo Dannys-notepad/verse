@@ -1,12 +1,14 @@
 import { geminiChat } from './providers/gemini.js';
 import log from '../../utils/log.js';
 import ConversationContext from './conversationContext.js';
+import { getUserMessages, saveUserMessage, saveAssistantMessage } from '../../db/repos/user.repo.js';
 
 /**
  * AI Service Module
  *
  * Orchestrates intelligent response generation with:
  * - In-memory conversation context management
+ * - User message history loaded from Firestore for persistence
  * - Automatic retry logic via httpClient
  * - Input validation and response normalization
  * - User-friendly error handling
@@ -152,37 +154,69 @@ function normalizeResponse(response) {
 
 /**
  * Generates an AI reply using Gemini provider
- * Uses in-memory conversation context for coherent dialogue
+ * Uses in-memory conversation context or persisted user history for coherent dialogue
  *
  * Flow:
  * 1. Validate user input
- * 2. Add message to conversation history
- * 3. Call Gemini provider with built prompt and context
- * 4. Normalize response format
- * 5. Add response to context for future coherence
- * 6. Return response or throw with error details
+ * 2. Load saved history from DB when userId is present
+ * 3. Save current user message in DB when userId is present
+ * 4. Call Gemini provider with built prompt and context
+ * 5. Normalize response format
+ * 6. Save assistant response in DB when userId is present
+ * 7. Return response or throw with error details
  *
  * @param {Object} options - Configuration object
  * @param {string} options.userMessage - The user's input message
+ * @param {string} [options.userId] - Optional user identifier for persisted history
+ * @param {string} [options.platform='unknown'] - Platform name for message metadata
  * @returns {Promise<string>} - AI-generated response
  * @throws {Error} - When all providers fail or input is invalid
  *
- * @example\n * const response = await generateAIReply({ userMessage: 'Hello!' });
+ * @example\n * const response = await generateAIReply({ userMessage: 'Hello!', userId: '123' });
  */
-export async function generateAIReply({ userMessage }) {
+export async function generateAIReply({ userMessage, userId, platform = 'unknown' }) {
   // Step 1: Validate and sanitize input
   const cleanMessage = validateInput(userMessage);
   if (!cleanMessage) {
     throw new Error('Invalid message: must be between 1 and 5000 characters');
   }
 
-  // Step 2: Add user message to conversation context for history
-  conversationContext.addMessage('user', cleanMessage);
+  // Prevent short greetings from pulling previous conversation history.
+  const greetingPattern = /^(hi|hello|hey|hiya|good morning|good afternoon|good evening)([!?.\s].*)?$/i;
+  if (greetingPattern.test(cleanMessage)) {
+    return "Hello! I'm Verse, an advanced assistant here to help you. How can I assist you today?";
+  }
 
-  // Step 3: Build conversation history for LLM context
-  // Excludes current message (already added) to avoid duplication
-  const previousMessages = conversationContext.getContext().slice(0, -1);
-  const historyMessages = previousMessages.slice(-MAX_HISTORY_MESSAGES);
+  let historyMessages = [];
+  let usingPersistentHistory = false;
+
+  if (userId) {
+    usingPersistentHistory = true;
+    try {
+      const savedHistory = await getUserMessages(userId, MAX_HISTORY_MESSAGES);
+      historyMessages = savedHistory.map(msg => ({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        text: msg.text,
+      }));
+    } catch (error) {
+      log.warn('AI Service', `Failed to load conversation history from DB for user ${userId}: ${error.message}`);
+      historyMessages = [];
+    }
+
+    try {
+      await saveUserMessage(userId, cleanMessage, platform);
+    } catch (error) {
+      log.warn('AI Service', `Failed to save user message for ${userId}: ${error.message}`);
+    }
+  } else {
+    // Step 2: Add user message to conversation context for history
+    conversationContext.addMessage('user', cleanMessage);
+
+    // Step 3: Build conversation history for LLM context
+    // Excludes current message (already added) to avoid duplication
+    const previousMessages = conversationContext.getContext().slice(0, -1);
+    historyMessages = previousMessages.slice(-MAX_HISTORY_MESSAGES);
+  }
 
   // Step 4: Build system prompt with enhanced context
   // Includes universal system prompt, conversation history, and real-time info handling
@@ -248,26 +282,31 @@ export async function generateAIReply({ userMessage }) {
 
       log.info('AI Service', `Successfully generated response using ${provider.name}`);
 
-      // Step 7: Add assistant response to context for future coherence
-      conversationContext.addMessage('assistant', normalizedResponse);
+      if (usingPersistentHistory) {
+        try {
+          await saveAssistantMessage(userId, normalizedResponse, platform);
+        } catch (error) {
+          log.warn('AI Service', `Failed to save assistant response for ${userId}: ${error.message}`);
+        }
+      } else {
+        // Step 7: Add assistant response to context for future coherence
+        conversationContext.addMessage('assistant', normalizedResponse);
 
-      // Log context statistics
-      const stats = conversationContext.getStats();
-      log.error('AI Service', `Context stats: ${stats.messageCount} messages, ${stats.percentageUsed}% of token budget used`);
+        // Log context statistics
+        const stats = conversationContext.getStats();
+        log.error('AI Service', `Context stats: ${stats.messageCount} messages, ${stats.percentageUsed}% of token budget used`);
+      }
 
       return normalizedResponse;
     } catch (error) {
       log.warn('AI Service', `Provider ${provider.name} failed: ${error.message}`);
 
       // Auto-clear context if it's too large (content too long errors)
-      if (error.message?.includes('too long') || error.message?.includes('exceeds')) {
+      if (!usingPersistentHistory && (error.message?.includes('too long') || error.message?.includes('exceeds'))) {
         log.info('AI Service', 'Conversation context exceeded size limit. Clearing history for fresh start.');
         conversationContext.clear();
-        // Still record the error for reporting
-        errors.push({ provider: provider.name, error: error.message });
-      } else {
-        errors.push({ provider: provider.name, error: error.message });
       }
+      errors.push({ provider: provider.name, error: error.message });
       // Continue to next provider instead of failing immediately
     }
   }

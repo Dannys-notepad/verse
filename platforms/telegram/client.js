@@ -100,12 +100,30 @@ async function initTelegramClient() {
         platform: 'telegram'
       }
       // check user before proceeding
-      const userStat = await checkUser(payload)
+      const userCheckResult = await checkUser(payload)
 
       log.info('Telegram Client', `📱 Message from ${userName}: ${text}`)
 
       try {
-        if (userStat === 'user was temporarily banned') {
+        /************ BOT REPLYING WITHOUT USER DATA */
+
+        /// Send typing indicator
+        // await bot.sendChatAction(chatId, 'typing')
+
+        // // Generate response using AI service
+        // let response = await generateAIReply({ userMessage: text })
+
+        // // Send response
+        // await bot.sendMessage(chatId, response, {
+        //   parse_mode: 'Markdown',
+        //   reply_to_message_id: msg.message_id,
+        // })
+
+        // log.info('Telegram Client', `✅ Response sent to ${userName}`)
+
+
+        /**************************************************** */
+        if (userCheckResult === 'user was temporarily banned') {
           // Send response
           await bot.sendMessage(chatId, defaultMsg.banned, {
             parse_mode: 'Markdown',
@@ -113,52 +131,50 @@ async function initTelegramClient() {
           })
 
           log.info('Telegram Client', `✅ Response sent to ${userName}`)
-        } else if (userStat === 'quota exhuated') {
+        } else if (userCheckResult === 'quota exhuated') {
+          // Send quota exhausted message
+          await bot.sendMessage(chatId, defaultMsg.freeQuota, {
+            parse_mode: 'Markdown',
+            reply_to_message_id: msg.message_id,
+          })
 
-          // Reset tokens if needed
-          if (shouldResetTokens(user.lastTokenReset)) {
-            user.token = 20;
-            user.lastTokenReset = new Date().toISOString();
-            await resetUserToken(user); // Save to database
+          log.info('Telegram Client', `✅ Response sent to ${userName}`)
+        } else if (userCheckResult === 'new user') {
+          isNewUser = true
 
-            // Send typing indicator
-            await bot.sendChatAction(chatId, 'typing')
-
-            // Generate response using AI service
-            const response = await generateAIReply({ userMessage: text })
-
-            // Send response
-            await bot.sendMessage(chatId, response, {
-              parse_mode: 'Markdown',
-              reply_to_message_id: msg.message_id,
-            })
-
-            log.info('Telegram Client', `✅ Response sent to ${userName}`)
-
-            await deductUserToken(userId)
-          } else if (userStat === 'new user') {
-            isNewUser = true;
-          } else {
-            // Send response
-            await bot.sendMessage(chatId, defaultMsg.freeQuota, {
-              parse_mode: 'Markdown',
-              reply_to_message_id: msg.message_id,
-            })
-
-            log.info('Telegram Client', `✅ Response sent to ${userName}`)
-          }
-
-
-        } else {
           // Send typing indicator
           await bot.sendChatAction(chatId, 'typing')
 
           // Generate response using AI service
-          const response = await generateAIReply({ userMessage: text })
-          if (isNewUser) {
-            response = defaultMsg.termsOfService + "\n\n" + response;
-            isNewUser = false;
+          let response = await generateAIReply({ userMessage: text, userId })
+          response = defaultMsg.termsOfService + "\n\n" + response
+          isNewUser = false
+
+          // Send response
+          await bot.sendMessage(chatId, response, {
+            parse_mode: 'Markdown',
+            reply_to_message_id: msg.message_id,
+          })
+
+          log.info('Telegram Client', `✅ Response sent to ${userName}`)
+
+          await deductUserToken(userId)
+        } else {
+          // userCheckResult is a valid user object
+          const user = userCheckResult
+
+          // Check if tokens should be reset (past 00:20 and 24 hours since last reset)
+          if (shouldResetTokens(user.lastTokenReset)) {
+            await resetUserToken(userId)
           }
+
+          // Send typing indicator
+          await bot.sendChatAction(chatId, 'typing')
+
+          // Generate response using AI service
+          const response = await generateAIReply({ userMessage: text, userId })
+
+
           // Send response
           await bot.sendMessage(chatId, response, {
             parse_mode: 'Markdown',

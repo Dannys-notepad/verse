@@ -155,6 +155,11 @@ function sanitizeTelegramResponse(text) {
  *   ]
  * });
  */
+function maskApiKey(url) {
+    if (!url || typeof url !== 'string') return url;
+    return url.replace(/(key=)[^&]+/, '$1***');
+}
+
 export async function geminiChat({ messages }) {
     const maxRetries = keyState.keys.length;
     let lastError = null;
@@ -170,7 +175,6 @@ export async function geminiChat({ messages }) {
 
             // Helpful debug logging
             console.info(`[Attempt ${attempt}/${maxRetries}] Using key: ${currentKeyName}`);
-            console.info('Gemini Request URL:', requestUrl);
             console.info('Gemini Generation Config:', {
                 model: GEMINI_CONFIG.model,
                 temperature: GEMINI_CONFIG.temperature,
@@ -246,7 +250,7 @@ export async function geminiChat({ messages }) {
                 message: error?.message,
                 status: error?.response?.status,
                 responseData: error?.response?.data,
-                requestUrl: error?.config?.url,
+                requestUrl: maskApiKey(error?.config?.url),
             });
 
             // Determine if we should retry with another key

@@ -32,7 +32,7 @@ function handleBuiltIns(text) {
     const lower = text.trim().toLowerCase();
 
     // Pattern 1: Greetings - instant friendly response
-    if (/^(hi|hello|hey|good morning|good afternoon|good evening)$/i.test(lower)) {
+    if (/^(hi|hello|hey|good morning|good afternoon|good evening)([!?.\s].*)?$/i.test(lower)) {
         return "Hello! I'm Verse, an advanced assistant here to help you. How can I assist you today?";
     }
 
@@ -95,7 +95,7 @@ function handleBuiltIns(text) {
  *   platform: 'telegram'
  * });
  */
-export async function generateResponse({ userMessage, userId = 'user', platform = 'unknown' } = {}) {
+export async function generateResponse({ userMessage, userId, platform = 'unknown' } = {}) {
     // Log incoming request for debugging and analytics
     log.info('ResponseGenerator', `Generating response for ${platform} | user=${userId}`);
 
@@ -108,7 +108,7 @@ export async function generateResponse({ userMessage, userId = 'user', platform 
 
     // TIER 2: Delegate to AI service for intelligent response generation
     try {
-        const aiText = await generateAIReply({ userMessage });
+        const aiText = await generateAIReply({ userMessage, userId, platform });
 
         // Validate AI response is in correct format
         if (!aiText || typeof aiText !== 'string') {
