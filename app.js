@@ -1,7 +1,10 @@
 import express from 'express';
+import dotenv from 'dotenv';
 
 //import initWhatsAppClient from './platforms/whatsapp/client.js';
 import initTelegramClient from './platforms/telegram/client.js';
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,7 +37,7 @@ async function startPlatformClients() {
         });*/
 
         // Initialize Telegram client
-        const tg = await initTelegramClient();
+        const tg = await initTelegramClient(app);
         platformHandles.push(tg);
 
         tg.waitForReady().then(() => {

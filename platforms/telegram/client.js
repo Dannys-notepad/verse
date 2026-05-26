@@ -69,8 +69,11 @@ const defaultMsg = {
  * Initialize Telegram client
  * Integrates with main app server (polling mode)
  */
-async function initTelegramClient() {
+async function initTelegramClient(app) {
   const token = process.env.TELEGRAM_BOT_TOKEN
+  const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL
+  const webhookPath = process.env.TELEGRAM_WEBHOOK_PATH || '/telegram/webhook'
+  const useWebhook = Boolean(webhookUrl && app)
 
   if (!token) {
     log.warn('Telegram Client', '❌ TELEGRAM_BOT_TOKEN not configured - skipping Telegram')
@@ -84,8 +87,25 @@ async function initTelegramClient() {
   let bot = null
 
   try {
-    bot = new TelegramBot(token, { polling: true })
-    log.info('Telegram Client', '✅ Telegram bot initialized')
+    if (useWebhook) {
+      bot = new TelegramBot(token)
+      const fullWebhookUrl = `${webhookUrl.replace(/\/$/, '')}${webhookPath}`
+      await bot.setWebHook(fullWebhookUrl)
+      log.info('Telegram Client', `✅ Telegram webhook configured at ${fullWebhookUrl}`)
+
+      app.post(webhookPath, async (req, res) => {
+        try {
+          await bot.processUpdate(req.body)
+          res.sendStatus(200)
+        } catch (error) {
+          log.error('Telegram Client', `Webhook update error: ${error.message}`)
+          res.sendStatus(500)
+        }
+      })
+    } else {
+      bot = new TelegramBot(token, { polling: true })
+      log.info('Telegram Client', '✅ Telegram bot initialized in polling mode')
+    }
 
     // Handle ALL messages (no command filtering)
     bot.on('message', async (msg) => {
