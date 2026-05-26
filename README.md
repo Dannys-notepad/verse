@@ -1,68 +1,122 @@
 # VERSE AI
 
-## Summary
+## Overview
 
-This repository contains a bot/AI integration project with WhatsApp and Telegram support. The current implementation includes:
+VERSE AI is a cross-platform bot and AI integration project built with Node.js, Express, Firebase, Telegram, and WhatsApp support.
 
-- `app.js` for Express server startup and graceful shutdown
-- Platform clients under `platforms/telegram` and `platforms/whatsapp`
-- AI response service under `src/response/ai`
-- Firebase repo and user model placeholders
-- Utility modules for logging, formatting, and HTTP
+The current repository includes:
 
-## Environment variables
+- `app.js` — main Express server startup and graceful shutdown
+- `platforms/telegram` — Telegram client implementation
+- `platforms/whatsapp` — WhatsApp client implementation (currently disabled/commented out)
+- `src/response/ai` — AI response generation service
+- `src/db` — Firebase integration and user repository logic
+- `src/utils` — logging and utility helpers
 
-Copy `.env.example` into `.env` and configure the following values:
+## Requirements
 
-- `GEMINI_API_KEY` - Google Gemini API key
-- `AI_PROVIDER_TIMEOUT_MS` - maximum time (ms) to wait for an AI provider response (defaults to `30000`)
-- `GEMINI_MAX_OUTPUT_TOKENS` - maximum output token budget for Gemini requests (defaults to `1024`)
-- `AXIOS_TIMEOUT` - HTTP request timeout for the Axios client (defaults to `30000`)
-- `AXIOS_MAX_RETRY` - number of retry attempts for transient API errors
+- Node.js 18+ installed
+- `pnpm` package manager (recommended) or `npm`
+- Firebase service account credentials
+- Telegram bot token
 
-## What this codebase is lacking
+## Setup
 
-### 1. Documentation and metadata
-- No `README.md` until now
-- No `ENV.example` or documented environment variables
-- `package.json` is missing `author`, `description` details, and meaningful metadata
-- No contribution or usage instructions
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
 
-### 2. Tests and CI
-- No test framework or test files found
-- No dev dependencies for testing, linting, or type checking
-- No CI configuration (`.github/workflows`, etc.)
+2. Install dependencies:
+   ```bash
+   pnpm install
+   ```
 
-### 3. Tooling and quality checks
-- No ESLint, Prettier, or formatter configuration
-- No TypeScript support or type validation
-- No `npm`/`pnpm` scripts for linting, testing, or development
+3. Update `.env` with your own values.
 
-### 4. Configuration and environment validation
-- No `.env.example` to describe required environment variables
-- `app.js` does not call `dotenv.config()` even though env vars are used
-- No runtime validation for critical configuration values or secrets
+4. Start the app:
+   ```bash
+   pnpm start
+   ```
 
-### 5. Architecture and robustness
-- In-memory conversation context is not suitable for multi-user or production persistence
-- No API routes, structured routing, or centralized error-handling middleware
-- `index.js` references a missing `./shared/utils/log.js` path instead of `src/utils/log.js`
-- Platform initialization is partially commented out and not clearly configurable
+## Environment Variables
 
-### 6. Operational readiness
-- Minimal logging configuration and no monitoring/health-check endpoints
-- No instructions for deployment or operating the bot in production
-- No package scripts for development workflows or service orchestration
+The project uses `.env` for configuration.
 
-## Recommended next steps
+- `PORT` — server port (default: `5000`)
+- `AXIOS_TIMEOUT` — Axios request timeout in milliseconds
+- `AXIOS_MAX_RETRY` — Axios retry attempts
+- `AXIOS_USER_AGENT` — user agent string for outbound requests
+- `GEMINI_API_KEY_1` ... `GEMINI_API_KEY_5` — Gemini API keys
+- `AI_DEFAULT_MODEL` — default model name used by AI logic
+- `AI_MAX_TOKENS` — maximum tokens per AI request
+- `AI_TEMPERATURE` — temperature for AI generation
+- `TELEGRAM_BOT_TOKEN` — Telegram bot token
+- `TELEGRAM_WEBHOOK_URL` — deployed app base URL for Telegram webhooks
+- `TELEGRAM_WEBHOOK_PATH` — webhook path (default: `/telegram/webhook`)
+- `FIREBASE_SERVICE_ACCOUNT` — full Firebase service account JSON as a single env value
 
-1. Add project documentation and a `README` with setup and usage directions.
-2. Create an `.env.example` file and validate required environment variables at startup.
-3. Add a test framework and write unit/integration tests for core modules.
-4. Add linting and formatting configuration (`ESLint`, `Prettier`).
-5. Fix inconsistent paths and clean up the startup code paths in `app.js` / `index.js`.
-6. Improve architecture: persistent context storage, API route structure, and error handling.
+### Telegram Webhook Behavior
+
+- If `TELEGRAM_WEBHOOK_URL` is set, the app uses webhook mode and registers the callback at:
+  - `https://<your-domain><TELEGRAM_WEBHOOK_PATH>`
+- If `TELEGRAM_WEBHOOK_URL` is not set, the Telegram client falls back to polling mode.
+
+Example webhook URL:
+
+```env
+TELEGRAM_WEBHOOK_URL=https://verseai.onrender.com
+TELEGRAM_WEBHOOK_PATH=/telegram/webhook
+```
+
+## Firebase Service Account
+
+The app now reads Firebase credentials directly from the `FIREBASE_SERVICE_ACCOUNT` environment variable.
+
+That variable should contain the entire service account JSON object as a string.
+
+> Do not commit your `.env` file or secret credentials to source control.
+
+## Project Structure
+
+- `app.js` — Express app bootstrapping and platform initialization
+- `platforms/telegram/client.js` — Telegram bot client and message handling
+- `platforms/whatsapp/client.js` — WhatsApp client implementation
+- `src/db/firebase.js` — Firebase admin initialization
+- `src/response/ai/ai.service.js` — AI response generation entry point
+- `src/service/user.service.js` — user validation and token handling
+- `src/models/user.model.js` — user model logic
+
+## Running
+
+Start the application:
+
+```bash
+pnpm start
+```
+
+If you want to run directly with Node:
+
+```bash
+node app.js
+```
+
+## Known Limitations
+
+- No test suite is currently included
+- No linting or formatting configuration is present
+- WhatsApp client initialization is commented out in `app.js`
+- No CI or deployment automation is configured
+- No runtime validation for environment variables beyond presence checks
+
+## Recommended Improvements
+
+- Add automated tests and CI workflows
+- Add ESLint / Prettier configuration
+- Add better environment validation at startup
+- Add health-check endpoints and monitoring
+- Secure secret management for production deployments
 
 ## Notes
 
-This file is intentionally focused on gaps and improvements rather than implementation details. It should serve as a guide for making the repository more maintainable and production-ready.
+This README is intended to give developers a practical setup path and explain the current Telegram webhook behavior and Firebase env-based configuration.
