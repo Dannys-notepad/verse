@@ -1,28 +1,16 @@
 import admin from 'firebase-admin';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 let firestore;
 
 try {
     if (!admin.apps.length) {
-        const serviceAccountPath = path.resolve(
-            __dirname,
-            '../config/firebase-service-account.json'
-        );
+        const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-        // Validate service account file exists
-        if (!fs.existsSync(serviceAccountPath)) {
-            throw new Error(`Service account file not found at ${serviceAccountPath}`);
+        if (!serviceAccountJson) {
+            throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set');
         }
 
-        const serviceAccount = JSON.parse(
-            fs.readFileSync(serviceAccountPath, 'utf8')
-        );
+        const serviceAccount = JSON.parse(serviceAccountJson);
 
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
