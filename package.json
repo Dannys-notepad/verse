@@ -1,7 +1,7 @@
 {
   "name": "verse",
-  "version": "1.0.0",
-  "description": "Verse is a cross-platform Ai/bot hybrid, powered by advanced LLMs, for accuracy and efficency",
+  "version": "1.1.1",
+  "description": "A simple AI assistant bot for Telegram and WhatsApp.",
   "main": "app.js",
   "type": "module",
   "scripts": {

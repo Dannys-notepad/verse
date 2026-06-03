@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "verify-token-reset",
+			"type": "shell",
+			"command": "node --input-type=module -e \"import { shouldResetTokens } from './src/models/user.model.js'; const now = new Date(); const old = new Date(now.getTime() - 25*60*60*1000).toISOString(); console.log('oldResetEligible=', shouldResetTokens(old)); console.log('currentResetEligible=', shouldResetTokens(now.toISOString()));\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

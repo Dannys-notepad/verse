@@ -16,17 +16,23 @@ function createUserModel({
 
 
 export function shouldResetTokens(lastReset) {
+    if (!lastReset) return false;
+
     const now = new Date();
     const lastResetDate = new Date(lastReset);
-    
+
+    if (Number.isNaN(lastResetDate.getTime())) {
+        return false;
+    }
+
     // Check if it's past 00:20
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const isPast0020 = currentHour > 0 || (currentHour === 0 && currentMinute >= 20);
-    
+
     // Check if 24 hours have passed
     const hoursSinceReset = (now - lastResetDate) / (1000 * 60 * 60);
-    
+
     return isPast0020 && hoursSinceReset >= 24;
 }
 

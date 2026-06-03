@@ -112,6 +112,7 @@ export async function resetToken(userId) {
     const ref = getUserDocRef(userId);
     await ref.update({
       token: 20,
+      lastTokenReset: admin.firestore.FieldValue.serverTimestamp(),
       lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     return userId;

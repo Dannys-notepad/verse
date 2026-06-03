@@ -30,28 +30,41 @@ function handleBuiltIns(text) {
     if (!text || typeof text !== 'string') return null;
 
     const lower = text.trim().toLowerCase();
+    const AiBotVersion = process.env.AI_BOT_VERSION
 
     // Pattern 1: Greetings - instant friendly response
-    if (/^(hi|hello|hey|good morning|good afternoon|good evening)([!?.\s].*)?$/i.test(lower)) {
+    if (/^(hi|hello|hey|watsup|what's up|good morning|good afternoon|good evening)([!?.\s].*)?$/i.test(lower)) {
         return "Hello! I'm Verse, an advanced assistant here to help you. How can I assist you today?";
     }
 
     // Pattern 2: Identity questions - explain who Verse is
     if (/^(who are you|what are you|about|info|who created you|who built you|who owns you)$/i.test(lower)) {
-        return "I'm Verse, an intelligent AI/bot hybrid assitant built to help you with questions, tasks and more.";
+        return "I'm Verse, an intelligent multi-social-media AI/bot hybrid assitant built to help you with questions, tasks and more.";
     }
 
-    // Pattern 3: Time queries - return current time without API call
+    // Pattern 3: about dev - telling who built Verse
+    if (/^(who created you|who built you|who owns you)$/i.test(lower)) {
+        return "I was built by Etim Daniel Udeme a 2nd year Industrial Chemistry Student, to help you with questions, tasks and more.";
+    }
+
+
+    // Pattern 4: Version queries - return the current bot version without API call
+    if (/^(?:what(?:'s| is| are)?(?: the)? version|version|show me your version|current version)(?:[!?.\s].*)?$/i.test(lower)) {
+        const versionText = AiBotVersion ? `v${AiBotVersion}` : 'unknown';
+        return `Verse is currently running on version ${versionText}.`;
+    }
+
+    // Pattern 5: Time queries - return current time without API call
     if (/^(time|what time)/.test(lower)) {
         return `The current time is ${new Date().toLocaleTimeString()}`;
     }
 
-    // Pattern 4: Date queries - return current date without API call
+    // Pattern 6: Date queries - return current date without API call
     if (/^(date|what date)/.test(lower)) {
         return `Today is ${new Date().toLocaleDateString()}`;
     }
 
-    // Pattern 5: Simple arithmetic - parse and calculate instantly
+    // Pattern 7: Simple arithmetic - parse and calculate instantly
     // Supports: +, -, *, / with optional decimal numbers
     const mathMatch = text.match(/^\s*(\d+(?:\.\d+)?)\s*([\+\-\*\/])\s*(\d+(?:\.\d+)?)\s*$/);
     if (mathMatch) {

@@ -1,6 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api'
 import dotenv from 'dotenv'
-import { generateAIReply } from '../../src/response/ai/ai.service.js'
+import { generateResponse } from '../../src/response/ai/responseGenerator.js'
 import log from '../../src/utils/log.js'
 import { checkUser, deductUserToken, resetUserToken } from '../../src/service/user.service.js'
 import { shouldResetTokens } from '../../src/models/user.model.js'
@@ -8,6 +8,23 @@ import { shouldResetTokens } from '../../src/models/user.model.js'
 dotenv.config()
 
 let isNewUser = false;
+
+function isLocalWebhookUrl(url) {
+  if (!url) return false;
+
+  try {
+    const parsed = new URL(url);
+    return ['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].includes(parsed.hostname) || parsed.hostname.startsWith('192.168.') || parsed.hostname.startsWith('10.') || parsed.hostname.startsWith('172.');
+  } catch (error) {
+    return false;
+  }
+}
+
+function shouldUsePolling(webhookUrl) {
+  const forcePolling = ['1', 'true', 'yes'].includes(String(process.env.TELEGRAM_USE_POLLING || '').toLowerCase());
+  return forcePolling || isLocalWebhookUrl(webhookUrl);
+}
+
 const defaultMsg = {
   banned: `
     ⚠️ Your account has been temporarily suspended.
@@ -17,7 +34,7 @@ const defaultMsg = {
     If you believe this is incorrect, please reply here or contact verse.avx@gmail.com for support.
   `,
   freeQuota: `
-    ⏳ Your free message quota for today has been used.
+    ⏳ Your message quota for today has been used.
 
     You can continue using VERSE again after the daily quota resets at 00:20.
     If you need more access, consider upgrading your plan or checking your account status.
@@ -73,7 +90,8 @@ async function initTelegramClient(app) {
   const token = process.env.TELEGRAM_BOT_TOKEN
   const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL
   const webhookPath = process.env.TELEGRAM_WEBHOOK_PATH || '/telegram/webhook'
-  const useWebhook = Boolean(webhookUrl && app)
+  const forcePolling = shouldUsePolling(webhookUrl)
+  const useWebhook = Boolean(webhookUrl && app && !forcePolling)
 
   if (!token) {
     log.warn('Telegram Client', '❌ TELEGRAM_BOT_TOKEN not configured - skipping Telegram')
@@ -104,7 +122,11 @@ async function initTelegramClient(app) {
       })
     } else {
       bot = new TelegramBot(token, { polling: true })
-      log.info('Telegram Client', '✅ Telegram bot initialized in polling mode')
+      if (forcePolling) {
+        log.info('Telegram Client', '✅ Telegram bot initialized in polling mode for local testing')
+      } else {
+        log.info('Telegram Client', '✅ Telegram bot initialized in polling mode')
+      }
     }
 
     // Handle ALL messages (no command filtering)
@@ -165,8 +187,8 @@ async function initTelegramClient(app) {
           // Send typing indicator
           await bot.sendChatAction(chatId, 'typing')
 
-          // Generate response using AI service
-          let response = await generateAIReply({ userMessage: text, userId })
+          // Generate response using the shared response pipeline
+          let response = await generateResponse({ userMessage: text, userId, platform: 'telegram' })
           response = defaultMsg.termsOfService + "\n\n" + response
           isNewUser = false
 
@@ -191,8 +213,8 @@ async function initTelegramClient(app) {
           // Send typing indicator
           await bot.sendChatAction(chatId, 'typing')
 
-          // Generate response using AI service
-          const response = await generateAIReply({ userMessage: text, userId })
+          // Generate response using the shared response pipeline
+          const response = await generateResponse({ userMessage: text, userId, platform: 'telegram' })
 
 
           // Send response

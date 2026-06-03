@@ -54,6 +54,7 @@ The project uses `.env` for configuration.
 - `TELEGRAM_BOT_TOKEN` — Telegram bot token
 - `TELEGRAM_WEBHOOK_URL` — deployed app base URL for Telegram webhooks
 - `TELEGRAM_WEBHOOK_PATH` — webhook path (default: `/telegram/webhook`)
+- `TELEGRAM_USE_POLLING=true` — force polling mode for local development (no HTTPS required)
 - `FIREBASE_SERVICE_ACCOUNT` — full Firebase service account JSON as a single env value
 
 ### Telegram Webhook Behavior
@@ -61,6 +62,7 @@ The project uses `.env` for configuration.
 - If `TELEGRAM_WEBHOOK_URL` is set, the app uses webhook mode and registers the callback at:
   - `https://<your-domain><TELEGRAM_WEBHOOK_PATH>`
 - If `TELEGRAM_WEBHOOK_URL` is not set, the Telegram client falls back to polling mode.
+- If the webhook URL points to localhost or you set `TELEGRAM_USE_POLLING=true`, the bot will use polling mode automatically for local testing without HTTPS.
 
 Example webhook URL:
 
