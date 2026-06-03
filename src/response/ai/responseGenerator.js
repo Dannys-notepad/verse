@@ -26,41 +26,45 @@ import { generateAIReply } from './ai.service.js';
  * @returns {string|null} - Built-in response or null if no pattern matches
  */
 function handleBuiltIns(text) {
-    // Input validation
+    // Ignore empty or invalid input early to keep the response path simple.
     if (!text || typeof text !== 'string') return null;
 
     const lower = text.trim().toLowerCase();
-    const AiBotVersion = process.env.AI_BOT_VERSION
+    const AiBotVersion = process.env.AI_BOT_VERSION;
+
+    function match(pattern) {
+        return pattern.test(lower);
+    }
 
     // Pattern 1: Greetings - instant friendly response
-    if (/^(hi|hello|hey|watsup|what's up|good morning|good afternoon|good evening)([!?.\s].*)?$/i.test(lower)) {
+    if (match(/^(hi|hello|hey|watsup|what's up|good morning|good afternoon|good evening)([!?.\s].*)?$/i)) {
         return "Hello! I'm Verse, an advanced assistant here to help you. How can I assist you today?";
     }
 
     // Pattern 2: Identity questions - explain who Verse is
-    if (/^(who are you|what are you|about|info|who created you|who built you|who owns you)$/i.test(lower)) {
+    if (match(/^(who are you|what are you|about|info|who created you|who built you|who owns you)$/i)) {
         return "I'm Verse, an intelligent multi-social-media AI/bot hybrid assitant built to help you with questions, tasks and more.";
     }
 
     // Pattern 3: about dev - telling who built Verse
-    if (/^(who created you|who built you|who owns you)$/i.test(lower)) {
+    if (match(/^(who created you|who built you|who owns you)$/i)) {
         return "I was built by Etim Daniel Udeme a 2nd year Industrial Chemistry Student, to help you with questions, tasks and more.";
     }
 
 
     // Pattern 4: Version queries - return the current bot version without API call
-    if (/^(?:what(?:'s| is| are)?(?: the)? version|version|show me your version|current version)(?:[!?.\s].*)?$/i.test(lower)) {
+    if (match(/^(?:what(?:'s| is| are)?(?: the)? version|version|show me your version|current version)(?:[!?.\s].*)?$/i)) {
         const versionText = AiBotVersion ? `v${AiBotVersion}` : 'unknown';
         return `Verse is currently running on version ${versionText}.`;
     }
 
     // Pattern 5: Time queries - return current time without API call
-    if (/^(time|what time)/.test(lower)) {
+    if (match(/^(time|what time)/)) {
         return `The current time is ${new Date().toLocaleTimeString()}`;
     }
 
     // Pattern 6: Date queries - return current date without API call
-    if (/^(date|what date)/.test(lower)) {
+    if (match(/^(date|what date)/)) {
         return `Today is ${new Date().toLocaleDateString()}`;
     }
 

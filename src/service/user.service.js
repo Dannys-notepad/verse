@@ -1,34 +1,50 @@
-import { findUserById, createUser, deductToken, bannUser, resetToken, updateUserActivity } from '../db/repos/user.repo.js';
+import { findUserById, createUser, deductToken, resetToken, updateUserActivity } from '../db/repos/user.repo.js';
 import createUserModel from '../models/user.model.js';
 
+function getUserId(userPayload) {
+  return String(userPayload?.id || '').trim();
+}
+
+function isUserBlocked(user) {
+  return user?.accountStatus === 'banned';
+}
+
+function hasAvailableTokens(user) {
+  return Number(user?.token || 0) > 0;
+}
+
 export async function checkUser(userPayload) {
-  if (!userPayload || !userPayload.id) {
+  const userId = getUserId(userPayload);
+
+  if (!userId) {
     throw new Error('userPayload with id is required');
   }
 
   try {
-    const existingUser = await findUserById(userPayload.id);
+    // If the user already exists, just validate their account status and token balance.
+    const existingUser = await findUserById(userId);
 
     if (existingUser) {
-      if(existingUser.accountStatus === 'banned'){
+      if (isUserBlocked(existingUser)) {
         return 'user was temporarily banned';
       }
-      if(Number(existingUser.token) === 0){
+
+      if (!hasAvailableTokens(existingUser)) {
         return 'quota exhuated';
       }
-      // Update user activity
-      await updateUserActivity(userPayload.id)
+
+      // Record activity so the dashboard and token logic can follow recent usage.
+      await updateUserActivity(userId);
       return existingUser;
     }
 
-    // Create new user
+    // New users get a default profile and token balance when they first interact.
     const newUser = createUserModel(userPayload);
     await createUser(newUser);
 
-    //return newUser;
     return 'new user';
   } catch (error) {
-    console.error(`Error ensuring user exists for ${userPayload.id}:`, error.message);
+    console.error(`Error ensuring user exists for ${userId}:`, error.message);
     throw error;
   }
 }
@@ -42,11 +58,12 @@ export async function deductUserToken(userId) {
     const existingUser = await findUserById(userId);
 
     if (existingUser) {
-      // Deduct user token
-      await deductToken(userId)
+      // Each successful AI reply consumes one token from the user's quota.
+      await deductToken(userId);
       return existingUser;
     }
 
+    return null;
   } catch (error) {
     console.error(`Error ensuring user exists for ${userId}, deducting token failed:`, error.message);
     throw error;
@@ -62,11 +79,12 @@ export async function resetUserToken(userId) {
     const existingUser = await findUserById(userId);
 
     if (existingUser) {
-      // Reset user token
-      await resetToken(userId)
+      // Reset the daily quota back to the default value when the reset rule matches.
+      await resetToken(userId);
       return existingUser;
     }
 
+    return null;
   } catch (error) {
     console.error(`Error ensuring user exists for ${userId}, resetting token failed:`, error.message);
     throw error;

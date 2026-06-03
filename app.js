@@ -3,25 +3,37 @@ import dotenv from 'dotenv';
 
 //import initWhatsAppClient from './platforms/whatsapp/client.js';
 import initTelegramClient from './platforms/telegram/client.js';
+import startMemoryMonitor from './src/utils/memoryMonitor.js';
 
 dotenv.config();
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+function createExpressApp() {
+    const app = express();
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+    // Parse incoming JSON and form data for bot/webhook requests.
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: false }));
 
-app.get('/', (req, res) => {
-    res.json({ msg: 'Hi, your server is up and running' })
-});
+    // Simple health-check route used during local development and deployment checks.
+    app.get('/', (_req, res) => {
+        res.json({ msg: 'Hi, your server is up and running' });
+    });
 
-// Start HTTP server and keep reference for graceful shutdown
+    return app;
+}
+
+const app = createExpressApp();
+const PORT = Number(process.env.PORT || 5000);
 const server = app.listen(PORT, () => {
-    console.log(`Server is up and running on port ${PORT}`)
+    console.log(`Server is up and running on port ${PORT}`);
 });
 
-// Keep track of running platform clients
+const memoryMonitor = startMemoryMonitor({
+    limitMb: Number(process.env.MEMORY_LIMIT_MB || 512),
+    restartThresholdMb: Number(process.env.MEMORY_RESTART_THRESHOLD_MB || 480),
+    intervalMs: Number(process.env.MEMORY_MONITOR_INTERVAL_MS || 30000),
+});
+
 const platformHandles = [];
 
 async function startPlatformClients() {
@@ -52,36 +64,41 @@ async function startPlatformClients() {
 
 startPlatformClients();
 
-// Graceful shutdown
+// Graceful shutdown keeps the app stable when the process receives a stop signal.
 let shuttingDown = false;
-async function shutdown(reason) {
-    if (shuttingDown) return;
-    shuttingDown = true;
-    console.log('Shutdown initiated:', reason);
 
-    // Stop platform clients
+async function stopPlatformClients() {
     for (const handle of platformHandles) {
         try {
             if (handle && typeof handle.stop === 'function') {
                 await handle.stop();
             }
-        } catch (e) {
-            console.error('Error stopping platform client:', e?.message || e);
+        } catch (error) {
+            console.error('Error stopping platform client:', error?.message || error);
         }
     }
+}
 
-    // Close HTTP server
+async function shutdown(reason) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+
+    console.log('Shutdown initiated:', reason);
+
+    await stopPlatformClients();
+    memoryMonitor.stop();
+
     try {
         server.close(() => {
             console.log('HTTP server closed');
             process.exit(0);
         });
-    } catch (e) {
-        console.error('Error closing HTTP server', e?.message || e);
+    } catch (error) {
+        console.error('Error closing HTTP server:', error?.message || error);
         process.exit(1);
     }
 
-    // Force exit after timeout
+    // Fallback safety-net in case the server does not close cleanly.
     setTimeout(() => {
         console.warn('Forcing shutdown');
         process.exit(1);

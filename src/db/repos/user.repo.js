@@ -13,6 +13,15 @@ function getUserMessagesCollectionRef(userId) {
   return getUserDocRef(userId).collection('messages');
 }
 
+function touchUser(userId, extraFields = {}) {
+  const ref = getUserDocRef(userId);
+
+  return ref.update({
+    lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
+    ...extraFields,
+  });
+}
+
 export async function getUserMessages(userId, limit = 20) {
   if (!userId) {
     throw new Error('userId is required');
@@ -109,11 +118,10 @@ export async function resetToken(userId) {
   }
 
   try {
-    const ref = getUserDocRef(userId);
-    await ref.update({
+    // Reset the user quota and mark the new reset time for daily tracking.
+    await touchUser(userId, {
       token: 20,
       lastTokenReset: admin.firestore.FieldValue.serverTimestamp(),
-      lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     return userId;
   } catch (error) {
@@ -128,10 +136,7 @@ export async function updateUserActivity(userId) {
   }
 
   try {
-    const ref = getUserDocRef(userId);
-    await ref.update({
-      lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    await touchUser(userId);
     return userId;
   } catch (error) {
     console.error(`Error updating user activity ${userId}:`, error.message);
@@ -155,9 +160,8 @@ export async function deductToken(userId) {
     const currentToken = Number(doc.data().token) || 0;
     const tokenDeducted = Math.max(currentToken - 1, 0);
 
-    await ref.update({
+    await touchUser(userId, {
       token: tokenDeducted,
-      lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     return userId;
   } catch (error) {
@@ -173,9 +177,8 @@ export async function bannUser(userId) {
 
   try {
     const ref = getUserDocRef(userId);
-    await ref.update({
+    await touchUser(userId, {
       accountStatus: 'banned',
-      lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     return userId;
   } catch (error) {
