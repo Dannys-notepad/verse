@@ -9,6 +9,11 @@ function getHeapUsageMb() {
     return usage.heapUsed / (1024 * 1024);
 }
 
+function parseBoolean(value) {
+    if (value === undefined || value === null) return true;
+    return String(value).toLowerCase() !== 'false';
+}
+
 function restartCurrentProcess() {
     const entryPoint = process.argv[1];
 
@@ -45,6 +50,7 @@ export function startMemoryMonitor({
     limitMb = DEFAULT_LIMIT_MB,
     restartThresholdMb = DEFAULT_RESTART_THRESHOLD_MB,
     intervalMs = DEFAULT_INTERVAL_MS,
+    selfRestart = parseBoolean(process.env.MEMORY_SELF_RESTART),
     onRestart = restartCurrentProcess,
 } = {}) {
     let restartTriggered = false;
@@ -62,7 +68,11 @@ export function startMemoryMonitor({
             console.error(`MemoryMonitor: memory limit reached (${heapUsedMb.toFixed(1)} MB >= ${limit} MB).`);
             if (!restartTriggered) {
                 restartTriggered = true;
-                onRestart();
+                if (selfRestart) {
+                    onRestart();
+                } else {
+                    console.warn('MemoryMonitor: self-restart disabled via MEMORY_SELF_RESTART=false. No auto-restart will be performed.');
+                }
             }
             return;
         }
@@ -70,7 +80,11 @@ export function startMemoryMonitor({
         if (heapUsedMb >= threshold && !restartTriggered) {
             console.warn(`MemoryMonitor: memory is close to the limit (${heapUsedMb.toFixed(1)} MB >= ${threshold} MB).`);
             restartTriggered = true;
-            onRestart();
+            if (selfRestart) {
+                onRestart();
+            } else {
+                console.warn('MemoryMonitor: self-restart disabled via MEMORY_SELF_RESTART=false. No auto-restart will be performed.');
+            }
         }
     }, Math.max(1000, Number(intervalMs) || DEFAULT_INTERVAL_MS));
 

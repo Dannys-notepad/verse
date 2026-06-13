@@ -14,14 +14,31 @@ function createUserModel({
     };
 }
 
+function parseLastTokenReset(lastReset) {
+    if (!lastReset) return null;
+
+    if (lastReset instanceof Date) {
+        return lastReset;
+    }
+
+    if (typeof lastReset === 'string') {
+        return new Date(lastReset);
+    }
+
+    if (typeof lastReset.toDate === 'function') {
+        return lastReset.toDate();
+    }
+
+    return new Date(lastReset);
+}
 
 export function shouldResetTokens(lastReset) {
     if (!lastReset) return false;
 
     const now = new Date();
-    const lastResetDate = new Date(lastReset);
+    const lastResetDate = parseLastTokenReset(lastReset);
 
-    if (Number.isNaN(lastResetDate.getTime())) {
+    if (!lastResetDate || Number.isNaN(lastResetDate.getTime())) {
         return false;
     }
 

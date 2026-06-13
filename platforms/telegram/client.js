@@ -144,7 +144,8 @@ async function initTelegramClient(app) {
       // check user before proceeding
       const userCheckResult = await checkUser(payload)
 
-      log.info('Telegram Client', `📱 Message from ${userName}: ${text}`)
+      // log.info('Telegram Client', `📱 Message from ${userName}: ${text}`)
+      log.info('Telegram Client', `📱 Message from ${userName}: ********`)
 
       try {
         /************ BOT REPLYING WITHOUT USER DATA */
@@ -173,7 +174,7 @@ async function initTelegramClient(app) {
           })
 
           log.info('Telegram Client', `✅ Response sent to ${userName}`)
-        } else if (userCheckResult === 'quota exhuated') {
+        } else if (userCheckResult === 'quota exhausted') {
           // Send quota exhausted message
           await bot.sendMessage(chatId, defaultMsg.freeQuota, {
             parse_mode: 'Markdown',
