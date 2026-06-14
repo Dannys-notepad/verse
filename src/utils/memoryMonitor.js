@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 
 const DEFAULT_LIMIT_MB = Number(process.env.MEMORY_LIMIT_MB || 512);
 const DEFAULT_RESTART_THRESHOLD_MB = Number(process.env.MEMORY_RESTART_THRESHOLD_MB || 480);
-const DEFAULT_INTERVAL_MS = Number(process.env.MEMORY_MONITOR_INTERVAL_MS || 30000);
+const DEFAULT_INTERVAL_MS = Number(process.env.MEMORY_MONITOR_INTERVAL_MS || 300000);
 
 function getHeapUsageMb() {
     const usage = process.memoryUsage();

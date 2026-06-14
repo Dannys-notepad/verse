@@ -145,7 +145,7 @@ async function initTelegramClient(app) {
       const userCheckResult = await checkUser(payload)
 
       // log.info('Telegram Client', `📱 Message from ${userName}: ${text}`)
-      log.info('Telegram Client', `📱 Message from ${userName}: ********`)
+      log.info('Telegram Client', `📱 Message from user ******** : ********`)
 
       try {
         /************ BOT REPLYING WITHOUT USER DATA */
@@ -171,9 +171,10 @@ async function initTelegramClient(app) {
           await bot.sendMessage(chatId, defaultMsg.banned, {
             parse_mode: 'Markdown',
             reply_to_message_id: msg.message_id,
-          })
+          }) 
 
-          log.info('Telegram Client', `✅ Response sent to ${userName}`)
+          // log.info('Telegram Client', `✅ Response sent to ${userName}`)
+          log.info('Telegram Client', `✅ Response sent to user ********`)
         } else if (userCheckResult === 'quota exhausted') {
           // Send quota exhausted message
           await bot.sendMessage(chatId, defaultMsg.freeQuota, {
@@ -181,7 +182,8 @@ async function initTelegramClient(app) {
             reply_to_message_id: msg.message_id,
           })
 
-          log.info('Telegram Client', `✅ Response sent to ${userName}`)
+          // log.info('Telegram Client', `✅ Response sent to ${userName}`)
+          log.info('Telegram Client', `✅ Response sent to user ********`)
         } else if (userCheckResult === 'new user') {
           isNewUser = true
 
@@ -224,7 +226,8 @@ async function initTelegramClient(app) {
             reply_to_message_id: msg.message_id,
           })
 
-          log.info('Telegram Client', `✅ Response sent to ${userName}`)
+          // log.info('Telegram Client', `✅ Response sent to ${userName}`)
+          log.info('Telegram Client', `✅ Response sent to user ********`)
 
           await deductUserToken(userId)
         }

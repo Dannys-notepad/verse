@@ -114,7 +114,8 @@ function handleBuiltIns(text) {
  */
 export async function generateResponse({ userMessage, userId, platform = 'unknown' } = {}) {
     // Log incoming request for debugging and analytics
-    log.info('ResponseGenerator', `Generating response for ${platform} | user=${userId}`);
+    // log.info('ResponseGenerator', `Generating response for ${platform} | user=${userId}`);
+    log.info('ResponseGenerator', `Generating response for ${platform} | user ********`);
 
     // TIER 1: Try built-in handlers first (instant, no API calls)
     const builtIn = handleBuiltIns(userMessage);
