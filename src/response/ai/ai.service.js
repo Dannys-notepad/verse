@@ -33,6 +33,7 @@ RESPONSE RULES:
 4. No slang or emojis.
 5. If uncertain: "I don't know. Check [source]."
 6. Code: minimal working snippet + 1-line explanation.
+7. Give descriptive explanation where possible.
 `
 
 /*`

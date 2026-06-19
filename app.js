@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 
 //import initWhatsAppClient from './platforms/whatsapp/client.js';
 import initTelegramClient from './platforms/telegram/client.js';
+import { runMessageEncryptionMigrationOnce } from './src/db/migrations/runMessageEncryptionMigration.js';
 import startMemoryMonitor from './src/utils/memoryMonitor.js';
 
 dotenv.config();
@@ -16,6 +17,7 @@ function createExpressApp() {
 
     // Simple health-check route used during local development and deployment checks.
     app.get('/', (_req, res) => {
+        console.log(`${req.method} ${req.url}`);
         res.json({ msg: 'Hi, your server is up and running' });
     });
 
@@ -38,6 +40,8 @@ const platformHandles = [];
 
 async function startPlatformClients() {
     try {
+        await runMessageEncryptionMigrationOnce();
+
         // Initialize WhatsApp client
         /*const wa = await initWhatsAppClient();
         platformHandles.push(wa);

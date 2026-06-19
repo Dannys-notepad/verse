@@ -2,7 +2,7 @@
 
 ## Overview
 
-VERSE AI is a cross-platform bot and AI integration project built with Node.js, Express, Firebase, Telegram, and WhatsApp support.
+VERSE AI is a cross-platform bot and AI integration project built with Node.js, Express, Firebase, Telegram(only active here for now), and WhatsApp support.
 
 The current repository includes:
 
@@ -67,7 +67,7 @@ The project uses `.env` for configuration.
 Example webhook URL:
 
 ```env
-TELEGRAM_WEBHOOK_URL=https://verseai.onrender.com
+TELEGRAM_WEBHOOK_URL=https://your-domain.com
 TELEGRAM_WEBHOOK_PATH=/telegram/webhook
 ```
 
@@ -103,21 +103,6 @@ If you want to run directly with Node:
 node app.js
 ```
 
-## Known Limitations
-
-- No test suite is currently included
-- No linting or formatting configuration is present
-- WhatsApp client initialization is commented out in `app.js`
-- No CI or deployment automation is configured
-- No runtime validation for environment variables beyond presence checks
-
-## Recommended Improvements
-
-- Add automated tests and CI workflows
-- Add ESLint / Prettier configuration
-- Add better environment validation at startup
-- Add health-check endpoints and monitoring
-- Secure secret management for production deployments
 
 ## Notes
 

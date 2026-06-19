@@ -1,4 +1,5 @@
 import { db, admin } from '../firebase.js';
+import { encrypt, decrypt } from '../../utils/encrypt-decrypt.js';
 
 function getUserDocRef(userId) {
   const normalizedId = String(userId || '').trim();
@@ -22,6 +23,28 @@ function touchUser(userId, extraFields = {}) {
   });
 }
 
+function isEncryptedPayload(value) {
+  return typeof value === 'string' && /^[a-fA-F0-9]{32}:[a-fA-F0-9]+$/.test(value);
+}
+
+function normalizeMessageRecord(doc) {
+  const messageData = { id: doc.id, ...doc.data() };
+  const secretKey = process.env.SECRET_KEY;
+  const rawPayload = messageData.encryptedContent ?? messageData.text;
+
+  if (isEncryptedPayload(rawPayload) && secretKey) {
+    try {
+      const decryptedText = decrypt(rawPayload, secretKey);
+      messageData.text = decryptedText;
+      messageData.content = decryptedText;
+    } catch (error) {
+      console.warn(`Unable to decrypt message ${doc.id}:`, error.message);
+    }
+  }
+
+  return messageData;
+}
+
 export async function getUserMessages(userId, limit = 20) {
   if (!userId) {
     throw new Error('userId is required');
@@ -34,7 +57,7 @@ export async function getUserMessages(userId, limit = 20) {
       .get();
 
     return snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .map(doc => normalizeMessageRecord(doc))
       .reverse();
   } catch (error) {
     console.error(`Error fetching user messages for ${userId}:`, error.message);
@@ -51,9 +74,17 @@ export async function saveMessage(userId, message) {
     throw new Error('message.text is required');
   }
 
+  const secretKey = process.env.SECRET_KEY;
+  if (!secretKey) {
+    throw new Error('SECRET_KEY is required');
+  }
+
+  const encryptedMessage = encrypt(message.text, secretKey);
+
   const normalized = {
     role: message.role || message.userIs || 'user',
-    text: String(message.text),
+    text: String(encryptedMessage),
+    encryptedContent: String(encryptedMessage),
     imgUrl: message.imgUrl ?? null,
     platform: message.platform ?? 'unknown',
     receivedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -111,14 +142,12 @@ export async function createUser(user) {
   }
 }
 
-
 export async function resetToken(userId) {
   if (!userId) {
     throw new Error('userId is required');
   }
 
   try {
-    // Reset the user quota and mark the new reset time for daily tracking.
     await touchUser(userId, {
       token: 20,
       lastTokenReset: admin.firestore.FieldValue.serverTimestamp(),
@@ -187,7 +216,6 @@ export async function bannUser(userId) {
   }
 }
 
-// Kept for backward compatibility - upserts with proper logic
 export async function upsertUser(user) {
   if (!user || !user.id) {
     throw new Error('User object with id is required');
@@ -198,13 +226,11 @@ export async function upsertUser(user) {
     const existingUser = await ref.get();
 
     if (existingUser.exists) {
-      // Update existing user - only update lastActiveAt and provided fields
       const updateData = { ...user };
-      delete updateData.createdAt; // Never override createdAt
+      delete updateData.createdAt;
       updateData.lastActiveAt = admin.firestore.FieldValue.serverTimestamp();
       await ref.update(updateData);
     } else {
-      // Create new user
       const userData = {
         ...user,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
