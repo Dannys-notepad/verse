@@ -1,4 +1,5 @@
 import log from '../../utils/log.js';
+import { performWebSearch, shouldTriggerWebSearch } from '../../modules/webSearch.js';
 import { generateAIReply } from './ai.service.js';
 
 /**
@@ -25,7 +26,7 @@ import { generateAIReply } from './ai.service.js';
  * @param {string} text - Raw user input
  * @returns {string|null} - Built-in response or null if no pattern matches
  */
-function handleBuiltIns(text) {
+async function handleBuiltIns(text) {
     // Ignore empty or invalid input early to keep the response path simple.
     if (!text || typeof text !== 'string') return null;
 
@@ -34,6 +35,19 @@ function handleBuiltIns(text) {
 
     function match(pattern) {
         return pattern.test(lower);
+    }
+
+    if (shouldTriggerWebSearch(text)) {
+        try {
+            const searchResult = await performWebSearch(text);
+            if (searchResult) {
+                log.info('ResponseGenerator', 'Web search handler matched');
+                log.info('ResponseGenerator', `Web search result: ${searchResult}`);
+                return searchResult;
+            }
+        } catch (error) {
+            log.warn('ResponseGenerator', `Web search failed: ${error.message}`);
+        }
     }
 
     // Pattern 1: Greetings - instant friendly response
@@ -118,7 +132,7 @@ export async function generateResponse({ userMessage, userId, platform = 'unknow
     log.info('ResponseGenerator', `Generating response for ${platform} | user ********`);
 
     // TIER 1: Try built-in handlers first (instant, no API calls)
-    const builtIn = handleBuiltIns(userMessage);
+    const builtIn = await handleBuiltIns(userMessage);
     if (builtIn) {
         log.info('ResponseGenerator', 'Built-in handler matched - skipping AI provider');
         return builtIn;

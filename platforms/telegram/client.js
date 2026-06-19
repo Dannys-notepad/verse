@@ -1,6 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api'
 import dotenv from 'dotenv'
 import { generateResponse } from '../../src/response/ai/responseGenerator.js'
+import { downloadMediaFromText, shouldTriggerMediaDownload } from '../../src/modules/downloadReels.js'
 import log from '../../src/utils/log.js'
 import { checkUser, deductUserToken, resetUserToken } from '../../src/service/user.service.js'
 import { shouldResetTokens } from '../../src/models/user.model.js'
@@ -148,6 +149,34 @@ async function initTelegramClient(app) {
       log.info('Telegram Client', `📱 Message from user ******** : ********`)
 
       try {
+        if (shouldTriggerMediaDownload(text)) {
+          try {
+            const media = await downloadMediaFromText(text)
+
+            if (!media?.url) {
+              await bot.sendMessage(
+                chatId,
+                'I couldn\'t download that media link right now. Please try another URL or make sure the post is public.',
+                { reply_to_message_id: msg.message_id }
+              )
+              return
+            }
+
+            await bot.sendVideo(chatId, media.url, {
+              caption: media.caption || '📥 Your media download is ready.',
+              reply_to_message_id: msg.message_id,
+            })
+            return
+          } catch (error) {
+            log.error('Telegram Client', `Media download failed: ${error.message}`)
+            await bot.sendMessage(
+              chatId,
+              'Sorry, I could not download that media yet. The link might be invalid or unsupported.',
+              { reply_to_message_id: msg.message_id }
+            )
+            return
+          }
+        }
         /************ BOT REPLYING WITHOUT USER DATA */
 
         /// Send typing indicator
@@ -171,7 +200,7 @@ async function initTelegramClient(app) {
           await bot.sendMessage(chatId, defaultMsg.banned, {
             parse_mode: 'Markdown',
             reply_to_message_id: msg.message_id,
-          }) 
+          })
 
           // log.info('Telegram Client', `✅ Response sent to ${userName}`)
           log.info('Telegram Client', `✅ Response sent to user ********`)
