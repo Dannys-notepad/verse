@@ -17,7 +17,7 @@ function createExpressApp() {
 
     // Simple health-check route used during local development and deployment checks.
     app.get('/', (_req, res) => {
-        console.log(`${req.method} ${req.url}`);
+        console.log(`${_req.method} ${_req.url}`);
         res.json({ msg: 'Hi, your server is up and running' });
     });
 
