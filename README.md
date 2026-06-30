@@ -4,11 +4,12 @@
 
 VERSE AI is a cross-platform bot and AI integration project built with Node.js, Express, Firebase, Telegram(only active here for now), and WhatsApp support.
 
+Try the bot on Telegram: https://t.me/UdemeAVXBot
+
 The current repository includes:
 
 - `app.js` — main Express server startup and graceful shutdown
 - `platforms/telegram` — Telegram client implementation
-- `platforms/whatsapp` — WhatsApp client implementation (currently disabled/commented out)
 - `src/response/ai` — AI response generation service
 - `src/db` — Firebase integration and user repository logic
 - `src/utils` — logging and utility helpers
@@ -50,49 +51,33 @@ The current repository includes:
 
 ## Environment Variables
 
-The project uses `.env` for configuration.
+Copy `.env.example` to `.env` and update the values below.
 
 - `PORT` — server port (default: `5000`)
-- `AXIOS_TIMEOUT` — Axios request timeout in milliseconds
-- `AXIOS_MAX_RETRY` — Axios retry attempts
-- `AXIOS_USER_AGENT` — user agent string for outbound requests
-- `GEMINI_API_KEY_1` ... `GEMINI_API_KEY_5` — Gemini API keys
-- `AI_DEFAULT_MODEL` — default model name used by AI logic
-- `AI_MAX_TOKENS` — maximum tokens per AI request
-- `AI_TEMPERATURE` — temperature for AI generation
+- `AI_BOT_VERSION` — optional version string used by the bot response layer
+- `SECRET_KEY` — encryption key used for message storage and decryption (key should be 32 bit)
+- `AXIOS_TIMEOUT` — request timeout in milliseconds for outbound HTTP calls
+- `AXIOS_MAX_RETRY` — retry count for HTTP requests
+- `AXIOS_USER_AGENT` — custom user-agent string for outbound requests
+- `GEMINI_API_KEY_1` ... `GEMINI_API_KEY_5` — Gemini API keys used for provider rotation
+- `AI_DEFAULT_MODEL` — optional default model name for AI configuration
+- `AI_MAX_TOKENS` — optional maximum output tokens per AI request
+- `AI_TEMPERATURE` — optional temperature for AI generation
+- `AI_PROVIDER_TIMEOUT_MS` — optional timeout for AI provider requests
+- `TAVILY_API_KEY_1` — API key for web search features
 - `TELEGRAM_BOT_TOKEN` — Telegram bot token
-- `TELEGRAM_WEBHOOK_URL` — deployed app base URL for Telegram webhooks
+- `TELEGRAM_USE_POLLING` — set to `true` for local polling mode without HTTPS
+- `TELEGRAM_WEBHOOK_URL` — public base URL for Telegram webhook mode
 - `TELEGRAM_WEBHOOK_PATH` — webhook path (default: `/telegram/webhook`)
-- `TELEGRAM_USE_POLLING=true` — force polling mode for local development (no HTTPS required)
-- `FIREBASE_SERVICE_ACCOUNT` — full Firebase service account JSON as a single env value
+- `MEMORY_LIMIT_MB`, `MEMORY_RESTART_THRESHOLD_MB`, `MEMORY_MONITOR_INTERVAL_MS`, `MEMORY_SELF_RESTART` — optional memory watchdog settings
+- `FIREBASE_SERVICE_ACCOUNT` — full Firebase service account JSON as a single environment value
 
-### Telegram Webhook Behavior
 
-- If `TELEGRAM_WEBHOOK_URL` is set, the app uses webhook mode and registers the callback at:
-  - `https://<your-domain><TELEGRAM_WEBHOOK_PATH>`
-- If `TELEGRAM_WEBHOOK_URL` is not set, the Telegram client falls back to polling mode.
-- If the webhook URL points to localhost or you set `TELEGRAM_USE_POLLING=true`, the bot will use polling mode automatically for local testing without HTTPS.
-
-Example webhook URL:
-
-```env
-TELEGRAM_WEBHOOK_URL=https://your-domain.com
-TELEGRAM_WEBHOOK_PATH=/telegram/webhook
-```
-
-## Firebase Service Account
-
-The app now reads Firebase credentials directly from the `FIREBASE_SERVICE_ACCOUNT` environment variable.
-
-That variable should contain the entire service account JSON object as a string.
-
-> Do not commit your `.env` file or secret credentials to source control.
 
 ## Project Structure
 
 - `app.js` — Express app bootstrapping and platform initialization
 - `platforms/telegram/client.js` — Telegram bot client and message handling
-- `platforms/whatsapp/client.js` — WhatsApp client implementation
 - `src/db/firebase.js` — Firebase admin initialization
 - `src/response/ai/ai.service.js` — AI response generation entry point
 - `src/service/user.service.js` — user validation and token handling
@@ -115,4 +100,4 @@ node app.js
 
 ## Notes
 
-This README is intended to give developers a practical setup path and explain the current Telegram webhook behavior and Firebase env-based configuration.
+This README is intended to give developers a practical setup path.
