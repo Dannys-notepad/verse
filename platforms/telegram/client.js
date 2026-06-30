@@ -171,7 +171,7 @@ async function initTelegramClient(app) {
           await bot.sendMessage(chatId, defaultMsg.banned, {
             parse_mode: 'Markdown',
             reply_to_message_id: msg.message_id,
-          }) 
+          })
 
           // log.info('Telegram Client', `✅ Response sent to ${userName}`)
           log.info('Telegram Client', `✅ Response sent to user ********`)

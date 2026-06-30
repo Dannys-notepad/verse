@@ -8,6 +8,13 @@
 			"args": [],
 			"isBackground": false,
 			"problemMatcher": []
+		},
+		{
+			"label": "verify-download-reels",
+			"type": "shell",
+			"command": "node --test tests/downloadReels.test.js",
+			"isBackground": false,
+			"problemMatcher": []
 		}
 	]
 }
