@@ -13,6 +13,15 @@ The current repository includes:
 - `src/db` — Firebase integration and user repository logic
 - `src/utils` — logging and utility helpers
 
+## Abilities / Features
+
+- Intelligent AI conversations through Telegram and future multi-platform support
+- Context-aware response generation using configurable AI providers
+- Web search integration for enhanced answers and up-to-date information
+- User management and token-based access handling through Firebase
+- Flexible deployment options with webhook or polling support for Telegram
+- Built-in logging, error handling, and graceful shutdown for reliable operation
+
 ## Requirements
 
 - Node.js 18+ installed
